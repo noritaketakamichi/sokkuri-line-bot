@@ -37,6 +37,7 @@ app.post("/webhook", (req, res, next) => {
         };
 
         console.log(replyMessages);
+        console.log("token", TOKEN);
 
         const dataString = JSON.stringify({
             replyToken: req.body.events[0].replyToken,
