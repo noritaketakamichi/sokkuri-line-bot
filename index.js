@@ -20,6 +20,8 @@ app.post("/webhook", (req, res, next) => {
 
     const replyMessages = [];
 
+    console.log(req.body);
+
     if (req.body.events[0].type === "message"){
 
         //req.body.events[0].message.typeがtextかどうかで分岐
