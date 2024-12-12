@@ -20,8 +20,13 @@ app.post("/webhook", (req, res, next) => {
 
     const replyMessages = [];
 
+    console.log("**************************************");
+    console.log("length", req.body.events.length);
+    console.log("++++++++++++++++++++++++++++++++++++++");
     console.log(req.body);
+    console.log("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
     console.log(req.body.events);
+    console.log("--------------------------------");
     console.log(req.body.events[0].message);
 
     if (req.body.events[0].type === "message"){
