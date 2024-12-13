@@ -27,8 +27,9 @@ app.post("/webhook", (req, res, next) => {
     const replyMessages = [];
     const messageIds = [];
 
+    console.log("messageId", req.body.events[0].message.id);
     // store message ids as array
-    if (req.body.events && req.body.events.length > 0 && req.body.events[0].message) {
+    if (req.body.events && req.body.events.length > 0) {
         messageIds.push(req.body.events[0].message.id);
         console.log("Stored message IDs:", messageIds);
     }
