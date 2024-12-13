@@ -32,6 +32,7 @@ app.post("/webhook", async (req, res) => {
         const replyMessages = [];
         const messageIds = [];
 
+        console.log("length", req.body.events.length);
         // メッセージIDの処理
         for (const event of req.body.events) {
             if (event.message && event.message.id) {
