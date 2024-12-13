@@ -2,6 +2,12 @@ require('dotenv').config();
 const https = require('https');
 const express = require('express');
 const app = express();
+const line = require('@line/bot-sdk');
+const drive = google.drive({ version: "v3", auth: jwtClient });
+
+const client = new line.Client({
+  channelAccessToken: process.env.LINE_ACCESS_TOKEN
+});
 
 const PORT = process.env.PORT || 3000;
 const TOKEN = process.env.LINE_ACCESS_TOKEN;
@@ -19,6 +25,14 @@ app.post("/webhook", (req, res, next) => {
     res.send("HTTP POST request sent to the webhook URL!");
 
     const replyMessages = [];
+    const messageIds = [];
+
+    // store message ids as array
+    if (req.body.events && req.body.events.length > 0 && req.body.events[0].message) {
+        messageIds.push(req.body.events[0].message.id);
+        console.log("Stored message IDs:", messageIds);
+    }
+    console.log("messageIds", messageIds);
 
     console.log("**************************************");
     console.log("length", req.body.events.length);
@@ -39,6 +53,16 @@ app.post("/webhook", (req, res, next) => {
                     "text" : req.body.events[0].message.text
             }); 
         }else{
+            const messageId = req.body.events[0].message.id;
+            client.getMessageContent(messageId)
+            .then((stream) => {
+                stream.on('data', (chunk) => {
+                    console.log("chunk", chunk);
+                });
+                stream.on('error', (err) => {
+                    console.error("error", err);
+                });
+            });
             //textじゃない場合は、固定の文字列を返す
             replyMessages.push({
                 "type" : "text",
