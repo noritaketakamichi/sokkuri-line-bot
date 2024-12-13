@@ -22,6 +22,7 @@ app.get("/", (req, res) => {
 });
 
 app.post("/webhook", async (req, res) => {
+    console.log("--------webhook-------");
     try {
         // リクエストの検証
         if (!req.body.events || !req.body.events.length) {
