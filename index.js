@@ -21,106 +21,105 @@ app.get("/", (req, res) => {
     res.sendStatus(200);
 });
 
-app.post("/webhook", (req, res, next) => {
+app.post("/webhook", async (req, res) => {
     try {
+        // リクエストの検証
         if (!req.body.events || !req.body.events.length) {
             return res.status(400).send('No events found');
         }
 
-        res.status(200).send("HTTP POST request sent to the webhook URL!");
-
         const event = req.body.events[0];
-        if (!event.message) {
-            console.log("No message in event");
-            return;
-        }
-    
-        res.send("HTTP POST request sent to the webhook URL!");
-
         const replyMessages = [];
         const messageIds = [];
 
-        console.log("messageId", req.body.events[0].message.id);
-        // store message ids as array
-        if (req.body.events && req.body.events.length > 0) {
-            messageIds.push(req.body.events[0].message.id);
-            console.log("Stored message IDs:", messageIds);
+        // メッセージIDの処理
+        for (const event of req.body.events) {
+            if (event.message && event.message.id) {
+                messageIds.push(event.message.id);
+                console.log("Stored message IDs:", messageIds);
+            }
+            // ... rest of your event handling code ...
         }
-        console.log("messageIds", messageIds);
 
-        console.log("**************************************");
-        console.log("length", req.body.events.length);
-        console.log("++++++++++++++++++++++++++++++++++++++");
-        console.log(req.body);
-        console.log("^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
-        console.log(req.body.events);
-        console.log("--------------------------------");
-        console.log(req.body.events[0].message);
+        // デバッグ用ログ
+        // console.log("messageIds", messageIds);
+        // console.log("event type:", event.type);
+        // console.log("event message:", event.message);
 
-        if (req.body.events[0].type === "message"){
-
-            //req.body.events[0].message.typeがtextかどうかで分岐
-            if (req.body.events[0].message.type === "text"){
-                //textだった場合は、その内容をそのまま返す
+        if (event.type === "message") {
+            if (event.message.type === "text") {
                 replyMessages.push({
-                        "type" : "text",
-                        "text" : req.body.events[0].message.text
-                }); 
-            }else{
-                const messageId = req.body.events[0].message.id;
-                client.getMessageContent(messageId)
-                .then((stream) => {
+                    "type": "text",
+                    "text": event.message.text
+                });
+            } else {
+                // 画像などテキスト以外のメッセージ処理
+                const messageId = event.message.id;
+                try {
+                    const stream = await client.getMessageContent(messageId);
                     stream.on('data', (chunk) => {
                         console.log("chunk", chunk);
                     });
                     stream.on('error', (err) => {
                         console.error("error", err);
                     });
-                });
-                //textじゃない場合は、固定の文字列を返す
-                replyMessages.push({
-                    "type" : "text",
-                    "text" : "テキストを入力してください"
-                })
-            };
+                } catch (error) {
+                    console.error("Error getting message content:", error);
+                }
 
-            // console.log(replyMessages);
-            // console.log("token", TOKEN);
+                replyMessages.push({
+                    "type": "text",
+                    "text": "テキストを入力してください"
+                });
+            }
 
             const dataString = JSON.stringify({
-                replyToken: req.body.events[0].replyToken,
+                replyToken: event.replyToken,
                 messages: replyMessages
-            }); 
+            });
 
             const headers = {
                 "Content-Type": "application/json",
                 "Authorization": "Bearer " + TOKEN
             };
 
-            const webhookOption = {
-                "hostname": "api.line.me",
-                "path": "/v2/bot/message/reply",
-                "method": "POST",
-                "headers": headers,
-                "body": dataString
-            }
+            // LINE APIへのリクエスト
+            try {
+                const webhookOption = {
+                    "hostname": "api.line.me",
+                    "path": "/v2/bot/message/reply",
+                    "method": "POST",
+                    "headers": headers,
+                    "body": dataString
+                };
 
-            const request = https.request(webhookOption, (res) => {
-                res.on("data", (d) => {
-                    process.stdout.write(d);
+                await new Promise((resolve, reject) => {
+                    const request = https.request(webhookOption, (response) => {
+                        let data = '';
+                        response.on('data', (chunk) => {
+                            data += chunk;
+                        });
+                        response.on('end', () => resolve(data));
+                    });
+
+                    request.on("error", reject);
+                    request.write(dataString);
+                    request.end();
                 });
-            });
 
-            request.on("error", (err) => {
-                console.error(err);
-            });
-
-            request.write(dataString);
-            request.end();
+                // 最後にリクエストの成功を返す
+                return res.status(200).send('OK');
+            } catch (error) {
+                console.error("Error sending reply:", error);
+                return res.status(500).send('Error sending reply');
+            }
         }
+
+        // イベントがmessage以外の場合
+        return res.status(200).send('OK');
     } catch (error) {
         console.error('Webhook error:', error);
-        res.status(500).send('Internal Server Error');
+        return res.status(500).send('Internal Server Error');
     }
 });
 
